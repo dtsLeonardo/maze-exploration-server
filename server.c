@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -25,16 +24,12 @@ void usage(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 5) {
-        usage(argc, argv);
-    }
-
-    if (strcmp(argv[3], "-i") != 0) {
+    if (argc < 5 || strcmp(argv[3], "-i") != 0) {
         usage(argc, argv);
     }
 
     struct sockaddr_storage storage;
-    if (0 != server_sockaddr_init(argv[1], argv[2], &storage)) {
+    if (server_sockaddr_init(argv[1], argv[2], &storage) != 0) {
         usage(argc, argv);
     }
 
@@ -68,9 +63,7 @@ int main(int argc, char **argv) {
     int colunas = 0;
     obterDimensoes(argv[4], &linhas, &colunas);
 
-    int posicaoX = 0;
-    int posicaoY = 0;
-
+    int posicaoX = 0, posicaoY = 0;
     int matriz[linhas][colunas];
     int mapa[TAM_MAX_BOARD][TAM_MAX_BOARD];
 
@@ -78,7 +71,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < linhas; i++) {
         for (int j = 0; j < colunas; j++) {
             fscanf(file, "%d", &matriz[i][j]);
-            if(matriz[i][j] == 2) {
+            if (matriz[i][j] == 2) {
                 posicaoX = i;
                 posicaoY = j;
             }
@@ -86,9 +79,11 @@ int main(int argc, char **argv) {
     }
 
     //Define mapa inicial
-    for (int i = 0; i < TAM_MAX_BOARD; i++)
-        for (int j = 0; j < TAM_MAX_BOARD; j++)
+    for (int i = 0; i < TAM_MAX_BOARD; i++) {
+        for (int j = 0; j < TAM_MAX_BOARD; j++) {
             mapa[i][j] = 4;
+        }
+    }
 
     while (1) {
         struct sockaddr_storage cstorage;
@@ -103,14 +98,15 @@ int main(int argc, char **argv) {
         char caddrstr[BUFSZ];
         addrtostr(caddr, caddrstr, BUFSZ);
         printf("client connected\n");
-        while(1) {
+
+        while (1) {
             struct action receberMensagem;
             memset(&receberMensagem, 0, sizeof(receberMensagem));
             recv(csock, &receberMensagem, sizeof(receberMensagem), 0);
 
             struct action enviarMensagem;
             memset(&enviarMensagem, 0, sizeof(enviarMensagem));
-            
+
             inicializarBoard(enviarMensagem.board);
 
             // Atualiza o mapa
@@ -136,13 +132,13 @@ int main(int argc, char **argv) {
             switch (receberMensagem.type) {
                 case 1: // Move o jogador
                     int direcoes[4][2] = {
-                        {-1, 0}, // Move para cima
-                        {0, 1},  // Move para direita
-                        {1, 0},  // Move para baixo
-                        {0, -1}  // Move para esquerda
+                        {-1, 0}, // Cima
+                        {0, 1},  // Direita
+                        {1, 0},  // Baixo
+                        {0, -1}  // Esquerda
                     };
 
-                    int direcao = receberMensagem.moves[0] - 1; // Ajusta para índice do array
+                    int direcao = receberMensagem.moves[0] - 1;
                     int novoX = posicaoX + direcoes[direcao][0];
                     int novoY = posicaoY + direcoes[direcao][1];
 
@@ -179,7 +175,7 @@ int main(int argc, char **argv) {
                 default: // Tipo de mensagem desconhecida
                     break;
             }
-            
+
             printf("Posição atual: (%d, %d) = %d\n", posicaoX, posicaoY, matriz[posicaoX][posicaoY]);
             verificaAoRedor(enviarMensagem.moves, linhas, colunas, matriz, posicaoX, posicaoY);
 
@@ -188,17 +184,15 @@ int main(int argc, char **argv) {
             // Verifica se o jogador escapou
             if (matriz[posicaoX][posicaoY] == 3) {
                 enviarMensagem.type = 5;
-                for (int i = 0; i < linhas * colunas; i++)
+                for (int i = 0; i < linhas * colunas; i++) {
                     enviarMensagem.board[i / colunas][i % colunas] = matriz[i / colunas][i % colunas];
+                }
             }
 
             send(csock, &enviarMensagem, sizeof(enviarMensagem), 0);
-
             printf("----------------------------------------------------------\n");
         }
     }
 
     exit(EXIT_SUCCESS);
 }
-
-

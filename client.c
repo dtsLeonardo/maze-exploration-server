@@ -53,8 +53,9 @@ int main(int argc, char **argv) {
     int moves[4] = {0};
 
     while (1) {
+        char comando[64];
         struct action enviarMensagem;
-        char comando[100];
+        
         memset(&enviarMensagem, 0, sizeof(enviarMensagem));
         printf("> ");
         scanf("%s", comando);
@@ -63,127 +64,112 @@ int main(int argc, char **argv) {
             case 0:
                 switch (strcmp(comando, "start")) {
                     case 0:
-                        enviarMensagem.type = 0;
-                        comecouJogo = 1;
+                enviarMensagem.type = 0;
+                comecouJogo = 1;
                         break;
 
                     default:
-                        printf("error: start the game first\n");
+                printf("error: start the game first\n");
                         printf("> ");
                         scanf("%s", comando);
                         break;
-                }
+            }
                 break;
 
             case 1:
-                switch (mapearComando(comando)) {
-                    case UP:
-                        if (validaMovimento(moves, 1)) {
-                            enviarMensagem.type = 1;
-                            enviarMensagem.moves[0] = 1;
+            switch (mapearComando(comando)) {
+                case UP:
+                    if (validaMovimento(moves, 1)) {
+                        enviarMensagem.type = 1;
+                        enviarMensagem.moves[0] = 1;
                             break;
-                        } else {
-                            printf("error: you cannot go this way\n");
+                    } else {
+                        printf("error: you cannot go this way\n");
                             scanf("%s", comando);
-                        }
-                        break;
+                    }
+                    break;
 
-                    case RIGHT:
-                        if (validaMovimento(moves, 2)) {
-                            enviarMensagem.type = 1;
-                            enviarMensagem.moves[0] = 2;
+                case RIGHT:
+                    if (validaMovimento(moves, 2)) {
+                        enviarMensagem.type = 1;
+                        enviarMensagem.moves[0] = 2;
                             break;
-                        } else {
-                            printf("error: you cannot go this way\n");
+                    } else {
+                        printf("error: you cannot go this way\n");
                             scanf("%s", comando);
-                        }
-                        break;
+                    }
+                    break;
 
-                    case DOWN:
-                        if (validaMovimento(moves, 3)) {
-                            enviarMensagem.type = 1;
-                            enviarMensagem.moves[0] = 3;
+                case DOWN:
+                    if (validaMovimento(moves, 3)) {
+                        enviarMensagem.type = 1;
+                        enviarMensagem.moves[0] = 3;
                             break;
-                        } else {
-                            printf("error: you cannot go this way\n");
+                    } else {
+                        printf("error: you cannot go this way\n");
                             scanf("%s", comando);
-                        }
-                        break;
+                    }
+                    break;
 
-                    case LEFT:
-                        if (validaMovimento(moves, 4)) {
-                            enviarMensagem.type = 1;
-                            enviarMensagem.moves[0] = 4;
+                case LEFT:
+                    if (validaMovimento(moves, 4)) {
+                        enviarMensagem.type = 1;
+                        enviarMensagem.moves[0] = 4;
                             break;
-                        } else {
-                            printf("error: you cannot go this way\n");
+                    } else {
+                        printf("error: you cannot go this way\n");
                             scanf("%s", comando);
-                        }
-                        break;
+                    }
+                    break;
 
-                    case MAP:
-                        enviarMensagem.type = 2;
-                        break;
+                case MAP:
+                    enviarMensagem.type = 2;
+                    break;
 
-                    case RESET:
-                        enviarMensagem.type = 6;
-                        break;
+                case RESET:
+                    enviarMensagem.type = 6;
+                    break;
 
-                    case EXIT:
-                        enviarMensagem.type = 7;
-                        return 0;
-                        break;
+                case EXIT:
+                    enviarMensagem.type = 7;
+                    return 0;
+                    break;
 
-                    case INVALID:
-                        printf("error: command not found\n");
-                        break;
+                case INVALID:
+                    printf("error: command not found\n");
+                    break;
 
-                    default:
-                        break;
-                }
-                break;
+                default:
+                    break;
+            }
+            break;
         }
         send(s, &enviarMensagem, sizeof(enviarMensagem), 0);
 
         struct action receberMensagem;
         memset(&receberMensagem, -1, sizeof(receberMensagem));
-
         recv(s, &receberMensagem, sizeof(receberMensagem), 0);
+
         for (int i = 0; i < 4; i++) {
             moves[i] = receberMensagem.moves[i];
         }
-        
+
         if (enviarMensagem.type == 2) {
             /*Exibir mapa*/
             for (int i = 0; i < TAM_MAX_BOARD; i++) {
                 int cont = 0;
                 for (int j = 0; j < TAM_MAX_BOARD; j++) {
                     switch (receberMensagem.board[i][j]) {
-                        case 0:
-                            printf("# ");
-                            break;
-                        case 1:
-                            printf("_ ");
-                            break;
-                        case 2:
-                            printf("> ");
-                            break;
-                        case 3:
-                            printf("X ");
-                            break;
-                        case 4:
-                            printf("? ");
-                            break;
-                        case 5:
-                            printf("+ ");
-                            break;
-                        default:
-                            cont++;
-                            break;
+                        case 0: printf("# "); break;
+                        case 1: printf("_ "); break;
+                        case 2: printf("> "); break;
+                        case 3: printf("X "); break;
+                        case 4: printf("? "); break;
+                        case 5: printf("+ "); break;
+                        default: cont++; break;
                     }
                 }
-
-                if (cont != TAM_MAX_BOARD)
+                if (cont != TAM_MAX_BOARD) 
                     printf("\n");
             }
         }
@@ -193,20 +179,11 @@ int main(int argc, char **argv) {
             printf("Possible moves: ");
             for (int i = 0; i < 4; i++) {
                 switch (moves[i]) {
-                    case 1:
-                        printf("up");
-                        break;
-                    case 2:
-                        printf("right");
-                        break;
-                    case 3:
-                        printf("down");
-                        break;
-                    case 4:
-                        printf("left");
-                        break;
-                    default:
-                        break;
+                    case 1: printf("up"); break;
+                    case 2: printf("right"); break;
+                    case 3: printf("down"); break;
+                    case 4: printf("left"); break;
+                    default: break;
                 }
 
                 if (moves[i + 1] == 0) {
@@ -227,35 +204,20 @@ int main(int argc, char **argv) {
                 for (int j = 0; j < TAM_MAX_BOARD; j++) {
                     char simbolo;
                     switch (receberMensagem.board[i][j]) {
-                        case 0:
-                            simbolo = '#';
-                            break;
-                        case 1:
-                            simbolo = '_';
-                            break;
-                        case 2:
-                            simbolo = '>';
-                            break;
-                        case 3:
-                            simbolo = 'X';
-                            break;
-                        default:
-                            cont++; // Incrementa se não for um caso esperado
-                            continue;
+                        case 0: simbolo = '#'; break;
+                        case 1: simbolo = '_'; break;
+                        case 2: simbolo = '>'; break;
+                        case 3: simbolo = 'X'; break;
+                        default: cont++; continue;
                     }
-
                     printf("%c ", simbolo);
                 }
-
-                // Apenas imprime uma nova linha se `cont` não corresponde ao tamanho da linha
-                if (cont != TAM_MAX_BOARD) {
+                if (cont != TAM_MAX_BOARD) 
                     printf("\n");
-                }
             }
             enviarMensagem.type = 6;
             send(s, &enviarMensagem, sizeof(enviarMensagem), 0);
         }
     }
-
-    exit(EXIT_SUCCESS);
-} 
+    exit(0);
+}
