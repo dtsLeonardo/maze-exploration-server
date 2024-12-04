@@ -223,29 +223,34 @@ int main(int argc, char **argv) {
             printf("You escaped!\n");
             /*Exibir labirinto completo*/
             for (int i = 0; i < TAM_MAX_BOARD; i++) {
-                int cont = 0;
+                int cont = 0;  // Conta elementos fora do padrão
                 for (int j = 0; j < TAM_MAX_BOARD; j++) {
+                    char simbolo;
                     switch (receberMensagem.board[i][j]) {
                         case 0:
-                            printf("# ");
+                            simbolo = '#';
                             break;
                         case 1:
-                            printf("_ ");
+                            simbolo = '_';
                             break;
                         case 2:
-                            printf("> ");
+                            simbolo = '>';
                             break;
                         case 3:
-                            printf("X ");
+                            simbolo = 'X';
                             break;
                         default:
-                            cont++;
-                            break;
+                            cont++; // Incrementa se não for um caso esperado
+                            continue;
                     }
+
+                    printf("%c ", simbolo);
                 }
 
-                if (cont != TAM_MAX_BOARD)
-                        printf("\n");
+                // Apenas imprime uma nova linha se `cont` não corresponde ao tamanho da linha
+                if (cont != TAM_MAX_BOARD) {
+                    printf("\n");
+                }
             }
             enviarMensagem.type = 6;
             send(s, &enviarMensagem, sizeof(enviarMensagem), 0);

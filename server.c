@@ -38,8 +38,7 @@ int main(int argc, char **argv) {
         usage(argc, argv);
     }
 
-    int s;
-    s = socket(storage.ss_family, SOCK_STREAM, 0);
+    int s = socket(storage.ss_family, SOCK_STREAM, 0);
     if (s == -1) {
         logexit("socket");
     }
@@ -57,10 +56,6 @@ int main(int argc, char **argv) {
     if (listen(s, 10) != 0) {
         logexit("listen");
     }
-
-    char addrstr[BUFSZ];
-    addrtostr(addr, addrstr, BUFSZ);
-    printf("bound to %s, waiting connections\n", addrstr);
 
     // Abre o arquivo
     FILE *file = fopen(argv[4], "r");
@@ -115,18 +110,28 @@ int main(int argc, char **argv) {
 
             struct action enviarMensagem;
             memset(&enviarMensagem, 0, sizeof(enviarMensagem));
-
+            
             inicializarBoard(enviarMensagem.board);
 
-            mapa[posicaoX][posicaoY] = matriz[posicaoX][posicaoY];
-            if (posicaoX > 0)
-                mapa[posicaoX - 1][posicaoY] = matriz[posicaoX - 1][posicaoY];
-            if (posicaoY > 0)
-                mapa[posicaoX][posicaoY - 1] = matriz[posicaoX][posicaoY - 1];
-            if (posicaoY < (colunas-1))
-                mapa[posicaoX][posicaoY + 1] = matriz[posicaoX][posicaoY + 1];
-            if (posicaoX < (linhas-1))
-                mapa[posicaoX + 1][posicaoY] = matriz[posicaoX + 1][posicaoY];
+            // Atualiza o mapa
+            int deslocamentos[4][2] = {
+                {-1, 0},     // Cima
+                {1, 0},      // Baixo
+                {0, -1},     // Esquerda
+                {0, 1}       // Direita
+            };
+
+            mapa[posicaoX][posicaoY] = matriz[posicaoX][posicaoY]; // Atualiza a posição atual
+
+            for (int i = 0; i < 4; i++) {
+                int novaX = posicaoX + deslocamentos[i][0];
+                int novaY = posicaoY + deslocamentos[i][1];
+
+                // Verifica se está dentro dos limites da matriz
+                if (novaX >= 0 && novaX < linhas && novaY >= 0 && novaY < colunas) {
+                    mapa[novaX][novaY] = matriz[novaX][novaY];
+                }
+            }
 
             switch (receberMensagem.type) {
                 case 1: // Move o jogador
@@ -166,7 +171,7 @@ int main(int argc, char **argv) {
                     printf("starting new game\n");
                     break;
 
-                case 7: // Cliente desconectado
+                case 7:
                     printf("client disconnected\n");
                     exit(1);
                     break;
@@ -176,16 +181,15 @@ int main(int argc, char **argv) {
             }
             
             printf("Posição atual: (%d, %d) = %d\n", posicaoX, posicaoY, matriz[posicaoX][posicaoY]);
-            verificaEntorno(enviarMensagem.moves, linhas, colunas, matriz, posicaoX, posicaoY);
+            verificaAoRedor(enviarMensagem.moves, linhas, colunas, matriz, posicaoX, posicaoY);
 
             enviarMensagem.type = 4;
 
             // Verifica se o jogador escapou
             if (matriz[posicaoX][posicaoY] == 3) {
                 enviarMensagem.type = 5;
-                for (int i = 0; i < linhas; i++)
-                    for (int j = 0; j < colunas; j++) 
-                        enviarMensagem.board[i][j] = matriz[i][j];
+                for (int i = 0; i < linhas * colunas; i++)
+                    enviarMensagem.board[i / colunas][i % colunas] = matriz[i / colunas][i % colunas];
             }
 
             send(csock, &enviarMensagem, sizeof(enviarMensagem), 0);

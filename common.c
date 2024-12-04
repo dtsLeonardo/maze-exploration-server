@@ -148,7 +148,7 @@ bool validaMovimento(int moves[4], int num) {
 
 /*Lógica para o servidor*/
 
-void verificaEntorno(int* resultado, int linhas, int colunas, int matriz[linhas][colunas], int posicaoX, int posicaoY) {
+void verificaAoRedor(int* resultado, int linhas, int colunas, int matriz[linhas][colunas], int posicaoX, int posicaoY) {
     memset(resultado, 0, 100 * sizeof(int));
 
     int count = 0;
@@ -170,31 +170,34 @@ void verificaEntorno(int* resultado, int linhas, int colunas, int matriz[linhas]
     }
 }
 
-void obterDimensoes(const char *arquivo, int *linhas, int *colunas) {
-    FILE *file = fopen(arquivo, "r");
-    if (!file) {
-        perror("fopen");
+void obterDimensoes(const char *nomeArquivo, int *numLinhas, int *numColunas) {
+    FILE *arquivo = fopen(nomeArquivo, "r");
+    if (!arquivo) {
+        perror("Erro ao abrir arquivo");
         exit(EXIT_FAILURE);
     }
 
-    *linhas = 0;
-    *colunas = 0;
-    char buffer[100];
+    *numLinhas = 0;
+    *numColunas = 0;
+    char linha[256];
 
-    while (fgets(buffer, sizeof(buffer), file)) {
-        (*linhas)++;
+    // Contar o número de linhas.
+    while (fgets(linha, sizeof(linha), arquivo)) {
+        (*numLinhas)++;
     }
-    rewind(file);
 
-    if (fgets(buffer, sizeof(buffer), file)) {
-        char *token = strtok(buffer, " \t\n");
-        while (token) {
-            (*colunas)++;
-            token = strtok(NULL, " \t\n");
+    rewind(arquivo);
+
+    if (fgets(linha, sizeof(linha), arquivo)) {
+        const char *delimitadores = " \t\n";
+        char *palavra = strtok(linha, delimitadores);
+        while (palavra) {
+            (*numColunas)++;
+            palavra = strtok(NULL, delimitadores);
         }
     }
 
-    fclose(file);
+    fclose(arquivo);
 }
 
 void inicializarBoard(int board[TAM_MAX_BOARD][TAM_MAX_BOARD]) {
