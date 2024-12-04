@@ -176,7 +176,6 @@ int main(int argc, char **argv) {
                     break;
             }
 
-            printf("Posição atual: (%d, %d) = %d\n", posicaoX, posicaoY, matriz[posicaoX][posicaoY]);
             verificaAoRedor(enviarMensagem.moves, linhas, colunas, matriz, posicaoX, posicaoY);
 
             enviarMensagem.type = 4;
@@ -190,7 +189,6 @@ int main(int argc, char **argv) {
             }
 
             send(csock, &enviarMensagem, sizeof(enviarMensagem), 0);
-            printf("----------------------------------------------------------\n");
         }
     }
 

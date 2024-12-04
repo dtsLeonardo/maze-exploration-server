@@ -62,19 +62,19 @@ int main(int argc, char **argv) {
 
         switch (comecouJogo) {
             case 0:
-                switch (strcmp(comando, "start")) {
-                    case 0:
-                enviarMensagem.type = 0;
-                comecouJogo = 1;
-                        break;
+            switch (strcmp(comando, "start")) {
+                case 0:
+                    enviarMensagem.type = 0;
+                    comecouJogo = 1;
+                    break;
 
-                    default:
-                printf("error: start the game first\n");
-                        printf("> ");
-                        scanf("%s", comando);
-                        break;
+                default:
+                    printf("error: start the game first\n");
+                    printf("> ");
+                    scanf("%s", comando);
+                    break;
             }
-                break;
+            break;
 
             case 1:
             switch (mapearComando(comando)) {
@@ -132,7 +132,6 @@ int main(int argc, char **argv) {
 
                 case EXIT:
                     enviarMensagem.type = 7;
-                    return 0;
                     break;
 
                 case INVALID:
@@ -219,5 +218,5 @@ int main(int argc, char **argv) {
             send(s, &enviarMensagem, sizeof(enviarMensagem), 0);
         }
     }
-    exit(0);
+    return 0;
 }
