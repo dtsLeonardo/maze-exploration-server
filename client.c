@@ -4,16 +4,20 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#define BUFSZ 1024
+#define TAM_MAX_BOARD 10
+
 // Estrutura de dados 'action'
 struct action {
     int type;
     int moves[100];
-    int board[10][10];
+    int board[TAM_MAX_BOARD][TAM_MAX_BOARD];
 };
 
 void usage(int argc, char **argv) {
@@ -22,249 +26,230 @@ void usage(int argc, char **argv) {
     exit(EXIT_FAILURE);
 }
 
-// função para verificar se no movimentos possiveis tem um movimento especifico
-int verificaMove(int moves[4], int num) {
-    for (int i = 0; i < 4; i++) {
-        if (num == moves[i])
-            return 1;
-    }
-    return 0;
-}
-
-#define BUFSZ 1024
-
 int main(int argc, char **argv) {
     if (argc < 3) {
         usage(argc, argv);
     }
 
     struct sockaddr_storage storage;
-    if (0 != addrparse(argv[1], argv[2], &storage)) {
+    if (addrparse(argv[1], argv[2], &storage) != 0) {
         usage(argc, argv);
     }
 
-    int s;
-    s = socket(storage.ss_family, SOCK_STREAM, 0);
+    int s = socket(storage.ss_family, SOCK_STREAM, 0);
     if (s == -1) {
         logexit("socket");
     }
 
     struct sockaddr *addr = (struct sockaddr *)(&storage);
-    if (0 != connect(s, addr, sizeof(storage))) {
+    if (connect(s, addr, sizeof(storage)) != 0) {
         logexit("connect");
     }
 
     char addrstr[BUFSZ];
     addrtostr(addr, addrstr, BUFSZ);
 
-    // printf("connected to %s\n", addrstr);
-
-    int local = 0;
+    bool comecouJogo = 0;
     int moves[4] = {0};
 
     while (1) {
-
-        // Cria a mensagem struct para enviar
-        // int possibleMoves[4];
-        //--------------------------------------------------------------------
-        struct action send_action;
-        memset(&send_action, 0, sizeof(send_action)); // preenche tudo com 0
-        //--------------------------------------------------------------------
-
-        // logica cliente
-        //------------------------------------------------------------------------
-        // recebe o que o cliente digitar;
-        char msg[100];
+        struct action enviarMensagem;
+        char comando[100];
+        memset(&enviarMensagem, 0, sizeof(enviarMensagem));
         printf("> ");
-        scanf("%s", msg);
+        scanf("%s", comando);
 
-        // fica no loop esperando ser digitado 'start'
-        if (local == 0) {
-            while (local == 0) {
-                if (strcmp(msg, "start") == 0) {
-                    send_action.type = 0;
-                    local = 1;
+        switch (comecouJogo) {
+            case 0:
+                switch (strcmp(comando, "start")) {
+                    case 0:
+                        enviarMensagem.type = 0;
+                        comecouJogo = 1;
+                        break;
+
+                    default:
+                        printf("error: start the game first\n");
+                        printf("> ");
+                        scanf("%s", comando);
+                        break;
                 }
-                else {
-                    printf("error: start the game first\n> ");
-                    scanf("%s", msg);
+                break;
+
+            case 1:
+                switch (mapearComando(comando)) {
+                    case UP:
+                        if (validaMovimento(moves, 1)) {
+                            enviarMensagem.type = 1;
+                            enviarMensagem.moves[0] = 1;
+                            break;
+                        } else {
+                            printf("error: you cannot go this way\n");
+                            scanf("%s", comando);
+                        }
+                        break;
+
+                    case RIGHT:
+                        if (validaMovimento(moves, 2)) {
+                            enviarMensagem.type = 1;
+                            enviarMensagem.moves[0] = 2;
+                            break;
+                        } else {
+                            printf("error: you cannot go this way\n");
+                            scanf("%s", comando);
+                        }
+                        break;
+
+                    case DOWN:
+                        if (validaMovimento(moves, 3)) {
+                            enviarMensagem.type = 1;
+                            enviarMensagem.moves[0] = 3;
+                            break;
+                        } else {
+                            printf("error: you cannot go this way\n");
+                            scanf("%s", comando);
+                        }
+                        break;
+
+                    case LEFT:
+                        if (validaMovimento(moves, 4)) {
+                            enviarMensagem.type = 1;
+                            enviarMensagem.moves[0] = 4;
+                            break;
+                        } else {
+                            printf("error: you cannot go this way\n");
+                            scanf("%s", comando);
+                        }
+                        break;
+
+                    case MAP:
+                        enviarMensagem.type = 2;
+                        break;
+
+                    case RESET:
+                        enviarMensagem.type = 6;
+                        break;
+
+                    case EXIT:
+                        enviarMensagem.type = 7;
+                        return 0;
+                        break;
+
+                    case INVALID:
+                        printf("error: command not found\n");
+                        break;
+
+                    default:
+                        break;
                 }
-            }
+                break;
         }
+        send(s, &enviarMensagem, sizeof(enviarMensagem), 0);
 
-        // fica no loop esperando ser digitado algum movimento valido
-        else if (local == 1) {
-            while (1) {
-                //testa se o comando enviado existe no jogo
-                //testa se o movimento escolhido é possivel
-                if (strcmp(msg, "up") == 0) {
-                    if (verificaMove(moves, 1)) {
-                        send_action.type = 1;
-                        send_action.moves[0] = 1;
-                        break;
-                    }
-                    else {
-                        printf("error: you cannot go this way\n> ");
-                        scanf("%s", msg);
-                    }
-                }
-                else if ((strcmp(msg, "right") == 0)) {
-                    if (verificaMove(moves, 2)) {
-                        send_action.type = 1;
-                        send_action.moves[0] = 2;
-                        break;
-                    }
-                    else {
-                        printf("error: you cannot go this way\n> ");
-                        scanf("%s", msg);
-                    }
-                }
-                else if ((strcmp(msg, "down") == 0)) {
-                    if (verificaMove(moves, 3)) {
-                        send_action.type = 1;
-                        send_action.moves[0] = 3;
-                        break;
-                    }
-                    else {
-                        printf("error: you cannot go this way\n> ");
-                        scanf("%s", msg);
-                    }
-                }
-                else if ((strcmp(msg, "left") == 0)) {
-                    if (verificaMove(moves, 4)) {
-                        send_action.type = 1;
-                        send_action.moves[0] = 4;
-                        break;
-                    }
-                    else {
-                        printf("error: you cannot go this way\n> ");
-                        scanf("%s", msg);
-                    }
-                }
-                else if ((strcmp(msg, "map") == 0)) {
-                    send_action.type = 2;
-                    break;
-                }
-                else if ((strcmp(msg, "reset") == 0)) {
-                    send_action.type = 6;
-                    break;
-                }
-                else if ((strcmp(msg, "exit") == 0)) {
-                    send_action.type = 7;
-                    break;
-                }
-                else {
-                    printf("error: command not found\n> ");
-                    scanf("%s", msg);
-                }
-            }
-        }        
+        struct action receberMensagem;
+        memset(&receberMensagem, -1, sizeof(receberMensagem));
 
-    //------------------------------------------------------------------------
-
-        // Envia a mensagem struct
-        //--------------------------------------------------------------------
-        size_t count = send(s, &send_action, sizeof(send_action), 0);
-
-        if (count != sizeof(send_action)) {
-            logexit("send");
-        }
-
-        if (send_action.type == 7) {
-            exit(1);
-        }
-        //--------------------------------------------------------------------
-
-        // recebe a mensagem action
-        //--------------------------------------------------------------------
-        struct action recv_action;
-        memset(&recv_action, -1, sizeof(recv_action)); // preenche a struct toda com -1
-
-        count = recv(s, &recv_action, sizeof(recv_action), 0); // recebe a mensagem
+        recv(s, &receberMensagem, sizeof(receberMensagem), 0);
         for (int i = 0; i < 4; i++) {
-            moves[i] = recv_action.moves[i];
-        }
-
-        //--------------------------------------------------------------------
-
-        //close(s);
-
-        // logica cliente
-        //--------------------------------------------------------------------
-
-        // imprime os movimentos possiveis
-        if (recv_action.type == 4) {
-            printf ("Possible moves:");
-            for (int i = 0; i < 4; i++) {
-                if (moves[i] == 1)
-                    printf (" up");
-                else if (moves[i] == 2)
-                    printf (" right");
-                else if (moves[i] == 3)
-                    printf (" down");
-                else if (moves[i] == 4)
-                    printf (" left");
-
-                if(moves[i+1] == 0)
-                {
-                    printf(".");
-                    break;
-                }
-                else
-                {
-                    printf(",");
-                }
-            }
-            printf("\n");
+            moves[i] = receberMensagem.moves[i];
         }
         
-        if (send_action.type == 2) {
-            for (int i = 0; i < 10; i++) {
+        if (enviarMensagem.type == 2) {
+            /*Exibir mapa*/
+            for (int i = 0; i < TAM_MAX_BOARD; i++) {
                 int cont = 0;
-                for (int j = 0; j < 10; j++) {
-                    if (recv_action.board[i][j] == 0)
-                        printf("# ");
-                    else if (recv_action.board[i][j] == 1)
-                        printf("_ ");
-                    else if (recv_action.board[i][j] == 2)
-                        printf("> ");
-                    else if (recv_action.board[i][j] == 3)
-                        printf("X ");
-                    else if (recv_action.board[i][j] == 4)
-                        printf("? ");
-                    else if (recv_action.board[i][j] == 5)
-                        printf("+ ");
-                    else
-                        cont++;
+                for (int j = 0; j < TAM_MAX_BOARD; j++) {
+                    switch (receberMensagem.board[i][j]) {
+                        case 0:
+                            printf("# ");
+                            break;
+                        case 1:
+                            printf("_ ");
+                            break;
+                        case 2:
+                            printf("> ");
+                            break;
+                        case 3:
+                            printf("X ");
+                            break;
+                        case 4:
+                            printf("? ");
+                            break;
+                        case 5:
+                            printf("+ ");
+                            break;
+                        default:
+                            cont++;
+                            break;
+                    }
                 }
-                if (cont != 10)
+
+                if (cont != TAM_MAX_BOARD)
                     printf("\n");
             }
         }
 
-        if (recv_action.type == 5) {
-            printf("You escaped!\n");
-                for (int i = 0; i < 10; i++) {
-                int cont = 0;
-                    for (int j = 0; j < 10; j++) {
-                        if (recv_action.board[i][j] == 0)
-                            printf("# ");
-                        else if (recv_action.board[i][j] == 1)
-                            printf("_ ");
-                        else if (recv_action.board[i][j] == 2)
-                            printf("> ");
-                        else if (recv_action.board[i][j] == 3)
-                            printf("X ");
-                        else
-                            cont++;
-                    }
-                    if (cont != 10)
-                        printf("\n");
+        if (receberMensagem.type == 4) {
+            /*Exibir movimentos possíveis*/
+            printf("Possible moves: ");
+            for (int i = 0; i < 4; i++) {
+                switch (moves[i]) {
+                    case 1:
+                        printf("up");
+                        break;
+                    case 2:
+                        printf("right");
+                        break;
+                    case 3:
+                        printf("down");
+                        break;
+                    case 4:
+                        printf("left");
+                        break;
+                    default:
+                        break;
                 }
 
-            scanf("%s", msg);
+                if (moves[i + 1] == 0) {
+                    printf(".");
+                    break;
+                } else {
+                    printf(", ");
+                }
+            }
+            printf("\n");
         }
-        //--------------------------------------------------------------------
+
+        if (receberMensagem.type == 5) {
+            printf("You escaped!\n");
+            /*Exibir labirinto completo*/
+            for (int i = 0; i < TAM_MAX_BOARD; i++) {
+                int cont = 0;
+                for (int j = 0; j < TAM_MAX_BOARD; j++) {
+                    switch (receberMensagem.board[i][j]) {
+                        case 0:
+                            printf("# ");
+                            break;
+                        case 1:
+                            printf("_ ");
+                            break;
+                        case 2:
+                            printf("> ");
+                            break;
+                        case 3:
+                            printf("X ");
+                            break;
+                        default:
+                            cont++;
+                            break;
+                    }
+                }
+
+                if (cont != TAM_MAX_BOARD)
+                        printf("\n");
+            }
+            enviarMensagem.type = 6;
+            send(s, &enviarMensagem, sizeof(enviarMensagem), 0);
+        }
     }
 
     exit(EXIT_SUCCESS);

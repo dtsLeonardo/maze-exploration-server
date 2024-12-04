@@ -2,8 +2,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <arpa/inet.h>
+
+#define TAM_MAX_BOARD 10
+
+struct action {
+    int type;
+    int moves[100];
+    int board[TAM_MAX_BOARD][TAM_MAX_BOARD];
+};
+
+/*Lógica de comunicação*/
 
 void logexit(const char *msg) {
 	perror(msg);
@@ -98,3 +109,101 @@ int server_sockaddr_init(const char *proto, const char *portstr,
         return -1;
     }
 }
+
+/*Lógica para o cliente*/
+
+typedef enum {
+    UP,
+    RIGHT,
+    DOWN,
+    LEFT,
+    MAP,
+    RESET,
+    EXIT,
+    INVALID
+} Comando;
+
+// Função para mapear o comando recebido para um valor do enum
+Comando mapearComando(char* comando) {
+    if (strcmp(comando, "up") == 0) return UP;
+    if (strcmp(comando, "right") == 0) return RIGHT;
+    if (strcmp(comando, "down") == 0) return DOWN;
+    if (strcmp(comando, "left") == 0) return LEFT;
+    if (strcmp(comando, "map") == 0) return MAP;
+    if (strcmp(comando, "reset") == 0) return RESET;
+    if (strcmp(comando, "exit") == 0) return EXIT;
+    return INVALID; // Retorna INVALID se o comando não for reconhecido
+}
+
+bool validaMovimento(int moves[4], int num) {
+    bool found = false;
+    for (int i = 0; i < 4; i++) {
+        if (moves[i] == num) {
+            found = true;
+            break;
+        }
+    }
+    return found;
+}
+
+/*Lógica para o servidor*/
+
+void verificaEntorno(int* resultado, int linhas, int colunas, int matriz[linhas][colunas], int posicaoX, int posicaoY) {
+    memset(resultado, 0, 100 * sizeof(int));
+
+    int count = 0;
+    int direcoes[4][2] = {
+        {-1, 0},  // Cima
+        {0, 1},   // Direita
+        {1, 0},   // Baixo
+        {0, -1}   // Esquerda
+    };
+
+    for (int i = 0; i < 4; i++) {
+        int novoX = posicaoX + direcoes[i][0];
+        int novoY = posicaoY + direcoes[i][1];
+
+        if (novoX >= 0 && novoX < linhas && novoY >= 0 && novoY < colunas && matriz[novoX][novoY] != 0) {
+            resultado[count] = i + 1;
+            count++;
+        }
+    }
+}
+
+void obterDimensoes(const char *arquivo, int *linhas, int *colunas) {
+    FILE *file = fopen(arquivo, "r");
+    if (!file) {
+        perror("fopen");
+        exit(EXIT_FAILURE);
+    }
+
+    *linhas = 0;
+    *colunas = 0;
+    char buffer[100];
+
+    while (fgets(buffer, sizeof(buffer), file)) {
+        (*linhas)++;
+    }
+    rewind(file);
+
+    if (fgets(buffer, sizeof(buffer), file)) {
+        char *token = strtok(buffer, " \t\n");
+        while (token) {
+            (*colunas)++;
+            token = strtok(NULL, " \t\n");
+        }
+    }
+
+    fclose(file);
+}
+
+void inicializarBoard(int board[TAM_MAX_BOARD][TAM_MAX_BOARD]) {
+    for (int i = 0; i < TAM_MAX_BOARD; i++) {
+        for (int j = 0; j < TAM_MAX_BOARD; j++) {
+            board[i][j] = -1;
+        }
+    }
+}
+
+
+
